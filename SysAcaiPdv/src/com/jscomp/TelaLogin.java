@@ -70,9 +70,12 @@ public class TelaLogin extends javax.swing.JFrame {
 
             if (rs.next()) {
                 // Login bem-sucedido, redirecionar para a próxima tela
+                UsuarioLogado.setNomeUsuario(username);
                TelaVendaPdv telainicial = new TelaVendaPdv();
                telainicial.setLocationRelativeTo(null); // Centralize a tela
                telainicial.setVisible(true);
+               
+
                dispose(); // Feche a tela de login
             } else {
                 JOptionPane.showMessageDialog(null, "Usuário ou senha inválidos!");

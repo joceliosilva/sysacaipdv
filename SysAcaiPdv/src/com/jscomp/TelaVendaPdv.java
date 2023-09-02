@@ -44,7 +44,8 @@ public class TelaVendaPdv extends javax.swing.JFrame {
     String usuario = prefs.get("usuario", "");
     String senha = prefs.get("senha", "");
     private DecimalFormat decimalFormat = new DecimalFormat("#0.00");
-    //private List<Produto> carrinho = new ArrayList<>();
+    private DecimalFormat decimalFormatpeso = new DecimalFormat("#0.000");
+    private List<ItemCarrinho> carrinho = new ArrayList<>();
     private double valorTotal = 0.0;
     String nomeUsuario = UsuarioLogado.getNomeUsuario();
     String nomeLoja = carregarNomeLoja();
@@ -67,6 +68,16 @@ public class TelaVendaPdv extends javax.swing.JFrame {
         }
     }
 });
+          valorPagoTextField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    atualizarTroco();
+                }
+            }
+    
+    
+    });
           cmbTigelas.addItemListener(new ItemListener() {
     public void itemStateChanged(ItemEvent e) {
         if (e.getStateChange() == ItemEvent.SELECTED) {
@@ -246,7 +257,7 @@ conexao.close();
                 String nomeTigela = rs.getString("nome");
                 double taraTigela = rs.getDouble("tara");
                 boolean tigelaUnica = rs.getBoolean("unica");
-
+                decimalFormatpeso.format(taraTigela);
                 // Preencha os campos de edição com os dados da tigela
                // txtNome.setText(nomeTigela);
                 txtTara.setText(String.valueOf(taraTigela));
@@ -261,6 +272,55 @@ conexao.close();
         }
     }
 }
+  private void adicionarItemAoCarrinho() {
+    // Obtenha os valores selecionados nos campos
+    String nomeProduto = (String) cmbProdutos.getSelectedItem();
+    String nomeTigela = (String) cmbTigelas.getSelectedItem();
+    double precoProduto = Double.parseDouble(txtPreco.getText());
+    double tara = Double.parseDouble(txtTara.getText());
+   // decimalFormat.format(tara);
+    double peso = Double.parseDouble(txtPeso.getText());
+
+    // Crie uma instância de ItemCarrinho e adicione ao carrinho
+    ItemCarrinho item = new ItemCarrinho(nomeProduto,peso, tara, precoProduto);
+    carrinho.add(item);
+
+    // Atualize o texto na área de texto do carrinho
+    //atualizarTextoCarrinho();
+atualizarCarrinho();
+    // Atualize o valor total
+    //calcularValorTotal();
+}
+
+   private void atualizarCarrinho() {
+        carrinhoTextArea.setText("");
+        carrinhoTextArea.append("  ITEM" + "      " + " PESO"  + "     " + "PRECO(kg)" + "    " + "VALOR TOTAL"+"\n");
+        
+        for (ItemCarrinho produto : carrinho) {
+              double subtotal = produto.calcularSubtotal();
+              double pesocp = produto.getQuantidade()- produto.getTara();
+             valorTotal += subtotal;
+            carrinhoTextArea.append(produto.getNomeProduto() + "  " + decimalFormatpeso.format(pesocp) + "      " + " R$ " + decimalFormat.format(produto.getPrecoUnitario()) + "                   " +  " R$ " +decimalFormat.format(valorTotal) + "\n");
+     
+                valorTotalLabel.setText("R$" + decimalFormat.format(valorTotal));
+                atualizarTroco();
+        }
+      
+    }
+   
+   
+    
+    private void atualizarTroco() {
+        try {
+            double valorPago = Double.parseDouble(valorPagoTextField.getText());
+            double troco = valorPago - valorTotal;
+            trocoLabel.setText("R$" + String.format("%.2f", troco));
+        } catch (NumberFormatException e) {
+            trocoLabel.setText(" ");
+        }
+        
+    }
+    
    
   
    
@@ -274,11 +334,11 @@ conexao.close();
         txtTara = new javax.swing.JTextField();
         cmbProdutos = new javax.swing.JComboBox<>();
         cmbTigelas = new javax.swing.JComboBox<>();
-        txtPeso = new javax.swing.JTextField();
         txtPreco = new javax.swing.JTextField();
-        valorTotalLabel1 = new javax.swing.JTextField();
+        valorTotalLabel = new javax.swing.JTextField();
         btnAddItem = new javax.swing.JButton();
         btnCancelarOp = new javax.swing.JButton();
+        txtPeso = new javax.swing.JTextField();
         jPanel1 = new javax.swing.JPanel();
         labelImage = new javax.swing.JLabel();
         txtnomeloja = new javax.swing.JLabel();
@@ -321,31 +381,38 @@ conexao.close();
         cmbTigelas.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
         cmbTigelas.setBorder(javax.swing.BorderFactory.createTitledBorder("SELECIONE TIGELA"));
 
-        txtPeso.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        txtPeso.setForeground(new java.awt.Color(0, 102, 255));
-        txtPeso.setBorder(javax.swing.BorderFactory.createTitledBorder("PESO"));
-        txtPeso.setFocusable(false);
-
         txtPreco.setEditable(false);
         txtPreco.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         txtPreco.setForeground(new java.awt.Color(0, 102, 255));
         txtPreco.setBorder(javax.swing.BorderFactory.createTitledBorder("PREÇO"));
         txtPreco.setFocusable(false);
 
-        valorTotalLabel1.setEditable(false);
-        valorTotalLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        valorTotalLabel1.setForeground(new java.awt.Color(0, 102, 255));
-        valorTotalLabel1.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createTitledBorder("VALOR TOTAL")));
-        valorTotalLabel1.setFocusable(false);
-        valorTotalLabel1.addActionListener(new java.awt.event.ActionListener() {
+        valorTotalLabel.setEditable(false);
+        valorTotalLabel.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        valorTotalLabel.setForeground(new java.awt.Color(0, 102, 255));
+        valorTotalLabel.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createTitledBorder("VALOR TOTAL")));
+        valorTotalLabel.setFocusable(false);
+        valorTotalLabel.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                valorTotalLabel1ActionPerformed(evt);
+                valorTotalLabelActionPerformed(evt);
             }
         });
 
         btnAddItem.setText("ADICIONAR");
+        btnAddItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddItemActionPerformed(evt);
+            }
+        });
 
         btnCancelarOp.setText("CANCELAR");
+
+        txtPeso.setBorder(javax.swing.BorderFactory.createTitledBorder("PESO"));
+        txtPeso.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtPesoActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -357,13 +424,12 @@ conexao.close();
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel2Layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(txtTara)
-                                        .addComponent(cmbTigelas, 0, 432, Short.MAX_VALUE)
-                                        .addComponent(cmbProdutos, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(txtPeso, javax.swing.GroupLayout.Alignment.TRAILING))
-                                    .addComponent(txtPreco, javax.swing.GroupLayout.PREFERRED_SIZE, 432, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(txtTara)
+                                    .addComponent(cmbTigelas, 0, 432, Short.MAX_VALUE)
+                                    .addComponent(cmbProdutos, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(txtPreco, javax.swing.GroupLayout.DEFAULT_SIZE, 432, Short.MAX_VALUE)
+                                    .addComponent(txtPeso)))
                             .addGroup(jPanel2Layout.createSequentialGroup()
                                 .addGap(120, 120, 120)
                                 .addComponent(btnAddItem)
@@ -372,7 +438,7 @@ conexao.close();
                         .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addContainerGap()
-                        .addComponent(valorTotalLabel1)))
+                        .addComponent(valorTotalLabel)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 339, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(9, Short.MAX_VALUE))
@@ -392,13 +458,13 @@ conexao.close();
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(txtTara, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(txtPeso, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
+                        .addComponent(txtPeso, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(16, 16, 16)
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(btnAddItem)
                             .addComponent(btnCancelarOp))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(valorTotalLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(valorTotalLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(263, 263, 263))
         );
 
@@ -521,7 +587,6 @@ conexao.close();
                         .addComponent(valorPagoTextField)
                         .addGap(3, 3, 3))
                     .addComponent(trocoLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
                 .addComponent(bntFinalizar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(4, 4, 4))
         );
@@ -585,9 +650,17 @@ conexao.close();
             dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
 
-    private void valorTotalLabel1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_valorTotalLabel1ActionPerformed
+    private void valorTotalLabelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_valorTotalLabelActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_valorTotalLabel1ActionPerformed
+    }//GEN-LAST:event_valorTotalLabelActionPerformed
+
+    private void txtPesoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtPesoActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtPesoActionPerformed
+
+    private void btnAddItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddItemActionPerformed
+       adicionarItemAoCarrinho();
+    }//GEN-LAST:event_btnAddItemActionPerformed
 
     
     public static void main(String args[]) {
@@ -628,7 +701,7 @@ conexao.close();
     private javax.swing.JLabel txtnomeloja;
     public javax.swing.JLabel userLog;
     private javax.swing.JTextField valorPagoTextField;
-    private javax.swing.JTextField valorTotalLabel1;
+    private javax.swing.JTextField valorTotalLabel;
     // End of variables declaration//GEN-END:variables
 
    
