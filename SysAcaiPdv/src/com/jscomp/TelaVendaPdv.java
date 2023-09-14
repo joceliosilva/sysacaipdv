@@ -73,6 +73,28 @@ public class TelaVendaPdv extends javax.swing.JFrame {
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     atualizarTroco();
+                    bntFinalizar.requestFocus();
+                }
+            }
+    
+    
+    });
+          bntFinalizar.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                   realizarVenda();
+                }
+            }
+    
+    
+    });
+          txtPeso.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    adicionarItemAoCarrinho();
+                    valorPagoTextField.requestFocus();
                 }
             }
     
@@ -320,7 +342,78 @@ atualizarCarrinho();
         }
         
     }
-    
+    private String gerarCupom(List<ItemCarrinho> itens, double valorTotal, double valorPago, double troco) {
+        StringBuilder cupomText = new StringBuilder();
+
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+
+        cupomText.append("========== Cupom de Venda ==========\n");
+        cupomText.append("Loja:"+nomeLoja+"\n");
+        cupomText.append("Data da Venda: " + sdf.format(new java.util.Date()) + "\n");
+        cupomText.append("====================================\n");
+        cupomText.append("Itens Comprados:\n");
+
+        for (ItemCarrinho item : itens) {
+            cupomText.append(item.getNomeProduto() + " - R$" + item.getPrecoUnitario()+ " x "  + item.getQuantidade() + " =  R$ "+ String.format("%.2f",item.calcularSubtotal())+ "\n");
+        }
+
+        cupomText.append("====================================\n");
+        cupomText.append("Valor Total: R$" + String.format("%.2f", valorTotal) + "\n");
+        cupomText.append("Valor Pago: R$" + String.format("%.2f", valorPago) + "\n");
+        cupomText.append("Troco: R$" + String.format("%.2f", troco) + "\n");
+
+        return cupomText.toString();
+    }
+
+    private void abrirJanelaCupom(String cupomText) {
+        JFrame cupomFrame = new JFrame("Cupom de Venda");
+        cupomFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        cupomFrame.setSize(400, 400);
+        CupomView cupomView = new CupomView(cupomText,cupomFrame);
+        cupomFrame.add(cupomView);
+       cupomFrame.setLocationRelativeTo(null);
+        cupomFrame.setVisible(true);
+        trocoLabel.setText(" ");
+        valorPagoTextField.setText(" ");
+}
+    private void realizarVenda(){
+          VendaDAO venda = new VendaDAO();
+        try {
+            venda.inserirVenda(valorTotal);
+        } catch (SQLException ex) {
+            Logger.getLogger(TelaVendaPdv.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       try {
+            double valorPago = Double.parseDouble(valorPagoTextField.getText());
+            double troco = valorPago - valorTotal;
+            if (troco >= 0) {
+                List<ItemCarrinho> itensVenda = new ArrayList<>();
+                for (ItemCarrinho produto : carrinho) {
+                    ItemCarrinho item = new ItemCarrinho(produto.getNomeProduto(), produto.getQuantidade(), produto.getTara(), produto.getPrecoUnitario());
+                    itensVenda.add(item);
+                }
+
+                String cupomText = gerarCupom(itensVenda, valorTotal, valorPago, troco);
+               
+                carrinho.clear();
+                valorTotal = 0.0;
+                carregarListaProdutos();
+                carregarListaTigela();
+                trocoLabel.setText("");
+                txtPeso.setText("");
+                txtPreco.setText("");
+                txtTara.setText("");
+                valorTotalLabel.setText("");
+                atualizarCarrinho();
+                abrirJanelaCupom(cupomText);
+            } else {
+                JOptionPane.showMessageDialog(this, "Valor pago insuficiente. Verifique o valor pago.");
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Insira um valor pago válido.");
+        }
+    }
+
    
   
    
@@ -406,6 +499,11 @@ atualizarCarrinho();
         });
 
         btnCancelarOp.setText("CANCELAR");
+        btnCancelarOp.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCancelarOpActionPerformed(evt);
+            }
+        });
 
         txtPeso.setBorder(javax.swing.BorderFactory.createTitledBorder("PESO"));
         txtPeso.addActionListener(new java.awt.event.ActionListener() {
@@ -582,11 +680,10 @@ atualizarCarrinho();
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addComponent(valorPagoTextField)
-                        .addGap(3, 3, 3))
-                    .addComponent(trocoLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(trocoLabel, javax.swing.GroupLayout.DEFAULT_SIZE, 61, Short.MAX_VALUE)
+                    .addComponent(valorPagoTextField))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(bntFinalizar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(4, 4, 4))
         );
@@ -636,10 +733,11 @@ atualizarCarrinho();
     }// </editor-fold>//GEN-END:initComponents
 
     private void bntFinalizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bntFinalizarActionPerformed
-        
+         realizarVenda();
     }//GEN-LAST:event_bntFinalizarActionPerformed
 
     private void valorPagoTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_valorPagoTextFieldActionPerformed
+
         // TODO add your handling code here:
     }//GEN-LAST:event_valorPagoTextFieldActionPerformed
 
@@ -661,6 +759,19 @@ atualizarCarrinho();
     private void btnAddItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddItemActionPerformed
        adicionarItemAoCarrinho();
     }//GEN-LAST:event_btnAddItemActionPerformed
+
+    private void btnCancelarOpActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelarOpActionPerformed
+                 carrinho.clear();
+                valorTotal = 0.0;
+                carregarListaProdutos();
+                carregarListaTigela();
+                trocoLabel.setText("");
+                txtPeso.setText("");
+                txtPreco.setText("");
+                txtTara.setText("");
+                valorTotalLabel.setText("");
+                atualizarCarrinho();
+    }//GEN-LAST:event_btnCancelarOpActionPerformed
 
     
     public static void main(String args[]) {
